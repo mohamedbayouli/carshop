@@ -1,9 +1,14 @@
 package com.example.carshop.service;
 
+import com.example.carshop.model.*;
+import com.example.carshop.model.Voiture;
 import com.example.carshop.repository.GarageRepository;
 import com.example.carshop.repository.VoitureRepository;
 import lombok.*;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +27,7 @@ public class VoitureService {
             v.setMoteur(updates.getMoteur());
             v.setProprietaire(updates.getProprietaire());
             return voitureRepo.save(v);
-        }).orElseThrow(() -> new ResourceNotFoundException("Voiture not found"));
+        });
     }
     public void delete(String id) { voitureRepo.deleteById(id); }
 
