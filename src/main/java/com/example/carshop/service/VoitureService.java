@@ -38,4 +38,13 @@ public class VoitureService {
         v.getProprietaire().get(proprietorIndex).getEntretiens().add(entretien);
         return voitureRepo.save(v);
     }
+    public List<Voiture> findByMarque (String marque) {
+        return voitureRepo.findByMarqueIgnoreCase(marque);
+    }
+    public List<Voiture> findByProprietaireNom (String nom) {
+        return voitureRepo.findByProprietaireNomIgnoreCase(nom);
+    }
+    public  List<Voiture> findByMoteurTypeIgnoreCase(String nom) {
+        return voitureRepo.findByMoteurTypeIgnoreCase(nom);
+    }
 }

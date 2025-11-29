@@ -50,9 +50,12 @@ public class VoitureController {
 
     @GetMapping("/search")
     public List<Voiture> search(@RequestParam(required = false) String marque,
-                                @RequestParam(required = false) String proprietaireNom) {
+                                @RequestParam(required = false) String proprietaireNom,
+                                @RequestParam(required = false) String model
+                                ) {
         if (marque != null) return voitureService.findByMarque(marque);
         if (proprietaireNom != null) return voitureService.findByProprietaireNom(proprietaireNom);
+        if (model !=null) return voitureService.findByMoteurTypeIgnoreCase(model);
         return voitureService.findAll();
     }
 }
