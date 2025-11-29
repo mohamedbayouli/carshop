@@ -1,7 +1,8 @@
 package com.example.carshop.service;
 
-
-
+import com.example.carshop.model.Garage;
+import com.example.carshop.model.Mecanicien;
+import com.example.carshop.model.Reparation;
 import com.example.carshop.repository.GarageRepository;
 import org.springframework.stereotype.Service;
 
@@ -16,23 +17,19 @@ public class GarageService {
         this.garageRepository = garageRepository;
     }
 
-    @Override
     public List<Garage> getAllGarages() {
         return garageRepository.findAll();
     }
 
-    @Override
     public Garage getGarageById(String id) {
         return garageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Garage not found with id: " + id));
     }
 
-    @Override
     public Garage addGarage(Garage garage) {
         return garageRepository.save(garage);
     }
 
-    @Override
     public Garage updateGarage(String id, Garage garage) {
         Garage existing = garageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Garage not found with id: " + id));
@@ -44,8 +41,32 @@ public class GarageService {
         return garageRepository.save(existing);
     }
 
-    @Override
     public void deleteGarage(String id) {
         garageRepository.deleteById(id);
+    }
+
+    public Garage addMecanicien(String garageId, Mecanicien mecanicien) {
+        Garage g = garageRepository.findById(garageId).orElseThrow(() -> new RuntimeException("Garage not found"));
+        if (g.getMecaniciens() != null) {
+            g.getMecaniciens().add(mecanicien);
+        } else {
+            g.setMecaniciens(List.of(mecanicien));
+        }
+        return garageRepository.save(g);
+    }
+
+    // -------------------- ADD RÉPARATION --------------------
+    public Garage addReparation(String garageId, int mIndex, Reparation reparation) {
+        Garage g = garageRepository.findById(garageId).orElseThrow(() -> new RuntimeException("Garage not found"));
+        if (g.getMecaniciens() == null || mIndex >= g.getMecaniciens().size()) {
+            throw new RuntimeException("Invalid mecanicien index");
+        }
+        Mecanicien m = g.getMecaniciens().get(mIndex);
+        if (m.getReparations() != null) {
+            m.getReparations().add(reparation);
+        } else {
+            m.setReparations(List.of(reparation));
+        }
+        return garageRepository.save(g);
     }
 }
