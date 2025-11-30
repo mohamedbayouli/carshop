@@ -1,26 +1,21 @@
 package com.example.carshop.model;
 
-import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.core.mapping.Field;
-
-import java.util.List;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-@Document(collection = "voiture")
 public class Voiture {
-    @Id
-    private String id; // maps the _id from JSON
-
     private String marque;
     private String modele;
-    private Integer annee;
 
-    private Moteur moteur;
+    // Constructors
+    public Voiture() {}
 
-    private List<Proprietaire> proprietaire;
+    public Voiture(String marque, String modele) {
+        this.marque = marque;
+        this.modele = modele;
+    }
+
+    // Getters and Setters
+    public String getMarque() { return marque; }
+    public void setMarque(String marque) { this.marque = marque; }
+
+    public String getModele() { return modele; }
+    public void setModele(String modele) { this.modele = modele; }
 }
