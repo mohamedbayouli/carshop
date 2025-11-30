@@ -1,65 +1,158 @@
 package com.example.carshop.controller;
 
 import com.example.carshop.model.Garage;
-import com.example.carshop.model.Mecanicien;
-import com.example.carshop.model.Reparation;
 import com.example.carshop.service.GarageService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-@RestController
-@RequestMapping("/api/garages")
-@RequiredArgsConstructor
+@Controller
+@RequestMapping("/garages")
 public class GarageController {
 
-    private final GarageService garageService;
+    @Autowired
+    private GarageService garageService;
 
-    @GetMapping
-    public List<Garage> getAll() {
-        return garageService.getAllGarages();
-    }
+//    @GetMapping
+//    public String getAllGarages(Model model) {
+//        model.addAttribute("garages", garageService.findAll());
+//        return "garages/index";
+//    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Garage> getById(@PathVariable String id) {
-        Garage g = garageService.getGarageById(id);
-        return (g != null) ? ResponseEntity.ok(g) : ResponseEntity.notFound().build();
+    public String getGarageById(@PathVariable String id, Model model) {
+        Optional<Garage> garage = garageService.findById(id);
+        if (garage.isPresent()) {
+            model.addAttribute("garage", garage.get());
+            return "garages/details";
+        } else {
+            return "redirect:/garages";
+        }
+    }
+
+    @GetMapping("/new")
+    public String showCreateForm(Model model) {
+        model.addAttribute("garage", new Garage());
+        return "garages/create";
     }
 
     @PostMapping
-    public ResponseEntity<Garage> create(@RequestBody Garage garage) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(garageService.addGarage(garage));
+    public String createGarage(@ModelAttribute Garage garage) {
+        garageService.save(garage);
+        return "redirect:/garages";
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Garage> update(@PathVariable String id, @RequestBody Garage garage) {
-        return ResponseEntity.ok(garageService.updateGarage(id, garage));
+    @GetMapping("/edit/{id}")
+    public String showEditForm(@PathVariable String id, Model model) {
+        Optional<Garage> garage = garageService.findById(id);
+        if (garage.isPresent()) {
+            model.addAttribute("garage", garage.get());
+            return "garages/edit";
+        } else {
+            return "redirect:/garages";
+        }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        garageService.deleteGarage(id);
-        return ResponseEntity.noContent().build();
+    @PostMapping("/update/{id}")
+    public String updateGarage(@PathVariable String id, @ModelAttribute Garage garage) {
+        garage.setId(id);
+        garageService.save(garage);
+        return "redirect:/garages";
     }
 
-    @PostMapping("/{garageId}/mecaniciens")
-    public ResponseEntity<Garage> addMecanicien(
-            @PathVariable String garageId,
-            @RequestBody Mecanicien mecanicien
-    ) {
-        return ResponseEntity.ok(garageService.addMecanicien(garageId, mecanicien));
+    @GetMapping("/delete/{id}")
+    public String deleteGarage(@PathVariable String id) {
+        garageService.deleteById(id);
+        return "redirect:/garages";
     }
 
-    @PostMapping("/{garageId}/mecaniciens/{mIndex}/reparations")
-    public ResponseEntity<Garage> addReparation(
-            @PathVariable String garageId,
-            @PathVariable int mIndex,
-            @RequestBody Reparation reparation
-    ) {
-        return ResponseEntity.ok(garageService.addReparation(garageId, mIndex, reparation));
+    @GetMapping
+    public String getAllGarages(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String ville,
+            @RequestParam(required = false) String sort,
+            Model model) {
+
+        List<Garage> garages = garageService.findAll();
+
+        // Apply search filter
+        if (search != null && !search.trim().isEmpty()) {
+            String searchLower = search.toLowerCase();
+            garages = garages.stream()
+                    .filter(garage ->
+                            garage.getNom().toLowerCase().contains(searchLower) ||
+                                    garage.getVille().toLowerCase().contains(searchLower))
+                    .collect(Collectors.toList());
+        }
+
+        // Apply ville filter
+        if (ville != null && !ville.trim().isEmpty()) {
+            garages = garages.stream()
+                    .filter(garage -> ville.equals(garage.getVille()))
+                    .collect(Collectors.toList());
+        }
+
+        // Apply sorting
+        if (sort != null) {
+            switch (sort) {
+                case "nom":
+                    garages.sort((g1, g2) -> g1.getNom().compareToIgnoreCase(g2.getNom()));
+                    break;
+                case "nom_desc":
+                    garages.sort((g1, g2) -> g2.getNom().compareToIgnoreCase(g1.getNom()));
+                    break;
+                case "ville":
+                    garages.sort((g1, g2) -> g1.getVille().compareToIgnoreCase(g2.getVille()));
+                    break;
+                case "ville_desc":
+                    garages.sort((g1, g2) -> g2.getVille().compareToIgnoreCase(g1.getVille()));
+                    break;
+            }
+        }
+
+        // Get unique villes for filter dropdown
+        List<String> villes = garageService.findAll().stream()
+                .map(Garage::getVille)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+
+        // Calculate statistics
+        long totalMecaniciens = garages.stream()
+                .mapToLong(this::countMecaniciens)
+                .sum();
+
+        long villesCount = garages.stream()
+                .map(Garage::getVille)
+                .distinct()
+                .count();
+
+        long garagesAvecMecaniciens = garages.stream()
+                .filter(this::hasMecaniciens)
+                .count();
+
+        model.addAttribute("garages", garages);
+        model.addAttribute("villes", villes);
+        model.addAttribute("totalMecaniciens", totalMecaniciens);
+        model.addAttribute("villesCount", villesCount);
+        model.addAttribute("garagesAvecMecaniciens", garagesAvecMecaniciens);
+
+        return "garages/index";
+    }
+
+    private long countMecaniciens(Garage garage) {
+        if (!hasMecaniciens(garage)) return 0;
+        if (garage.isSingleMecanicien()) return 1;
+        if (garage.isMultipleMecaniciens()) return garage.getMecaniciensList().size();
+        return 0;
+    }
+
+    private boolean hasMecaniciens(Garage garage) {
+        return garage.hasMecaniciens();
     }
 }
